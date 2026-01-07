@@ -1,7 +1,7 @@
 # Build stage
 FROM hexpm/elixir:1.17.3-erlang-27.2-debian-bookworm-20241202 AS build
 
-RUN apt-get update && apt-get install -y build-essential git nodejs npm && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential git && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -15,15 +15,12 @@ COPY mix.exs mix.lock ./
 RUN mix deps.get --only prod
 RUN mix deps.compile
 
-# Build assets
+# Build assets (Phoenix 1.7+ uses mix)
 COPY assets assets
 COPY priv priv
-RUN cd assets && npm install && npm run deploy
-RUN mix phx.digest
-
-# Build release
 COPY config config
 COPY lib lib
+RUN mix assets.deploy
 RUN mix compile
 RUN mix release
 
@@ -41,7 +38,6 @@ COPY --from=build /app/_build/prod/rel/phoenix_sqlite_demo ./
 
 ENV DATABASE_PATH=/data/phoenix_sqlite_demo.db
 
-# Create data directory for SQLite
 RUN mkdir -p /data
 
 EXPOSE 4000
